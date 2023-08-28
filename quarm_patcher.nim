@@ -1,6 +1,6 @@
 # nimble install zip
 # nimble install nigui
-import httpClient, nigui, osproc, zip/zipfiles
+import httpClient, nigui, os, osproc, std/strformat, zip/zipfiles
 
 proc fetch_file_1(): string =
   var url = "https://cdn.discordapp.com/attachments/1135981619858128998/1137492344162234368/projectquarm_08_05_2023.zip"
@@ -20,14 +20,28 @@ proc unzip_file_1(filename: string): void =
     # extracts all files from archive z to the destination directory.
     z.extractAll(".")
 
-proc patch_game(): void =
-  echo "Updating the game files..."
-  unzip_file_1(fetch_file_1())
-  echo "Game is up to date!"
+proc log(ta: TextArea, msg: string): void =
+  echo msg
+  ta.addLine(msg)
+  ta.scrollToBottom()
 
-proc run_game(): void =
-  let result = execProcess("./eqgame.exe", args=[], options={poUsePath})
-  echo result
+proc check_game(ta: TextArea): void =
+  ta.log("Game is good")
+
+proc patch_game(ta: TextArea): void =
+  ta.log("Updating the game files...")
+  unzip_file_1(fetch_file_1())
+  ta.log("Game is up to date!")
+
+proc run_game(ta: TextArea): void =
+  const gameFile = "./eqgame.exe"
+
+  if not fileExists(gameFile):
+    ta.log(&"Missing game file: {gameFile}")
+    return
+
+  let result = execProcess(gameFile, args=[], options={poUsePath})
+  ta.log(result)
 
 when isMainModule:
   app.init()
@@ -39,6 +53,9 @@ when isMainModule:
   var container = newLayoutContainer(Layout_Vertical)
   window.add(container)
 
+  var buttonCheck = newButton("Check Game Files")
+  container.add(buttonCheck)
+
   var buttonPatch = newButton("Patch Game")
   container.add(buttonPatch)
 
@@ -49,10 +66,12 @@ when isMainModule:
   container.add(buttonExit)
 
   var textArea = newTextArea()
+  textArea.editable = false
   container.add(textArea)
 
-  buttonPatch.onClick = proc(event: ClickEvent) = patch_game()
-  buttonRun.onClick = proc(event: ClickEvent) = run_game()
+  buttonCheck.onClick = proc(event: ClickEvent) = check_game(textArea)
+  buttonPatch.onClick = proc(event: ClickEvent) = patch_game(textArea)
+  buttonRun.onClick = proc(event: ClickEvent) = run_game(textArea)
   buttonExit.onClick = proc(event: ClickEvent) = app.quit()
 
   textArea.addLine("Button 1 clicked, message box opened.")
