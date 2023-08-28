@@ -1,36 +1,63 @@
 # nimble install zip
 # nimble install nigui
-import httpClient, nigui, os, osproc, std/strformat, zip/zipfiles
-
-proc fetch_file_1(): string =
-  var url = "https://cdn.discordapp.com/attachments/1135981619858128998/1137492344162234368/projectquarm_08_05_2023.zip"
-  var client = newHttpClient()
-  var zipContent = client.getContent(url)
-  var filename = "quarm_latest.zip"
-  writeFile(fileName, zipContent)
-
-  return fileName
-
-proc unzip_file_1(filename: string): void =
-  var z: ZipArchive
-
-  if not z.open(filename):
-    echo "Opening zip failed"
-  else:
-    # extracts all files from archive z to the destination directory.
-    z.extractAll(".")
+# nimble install checksums
+import
+  std/[httpclient, os, osproc, strformat],
+  zip/zipfiles,
+  checksums/md5,
+  nigui
 
 proc log(ta: TextArea, msg: string): void =
   echo msg
   ta.addLine(msg)
   ta.scrollToBottom()
 
+# TODO: Provide a list of files + destinations and handle programmatically
+proc fetch_file_1(ta: TextArea): string =
+  const
+    url = "https://cdn.discordapp.com/attachments/1135981619858128998/1137492344162234368/projectquarm_08_05_2023.zip"
+    filename = "quarm_latest.zip"
+
+  ta.log("Fetching Project Quarm files...")
+  let client = newHttpClient()
+  let zipContent = client.getContent(url)
+
+  writeFile(fileName, zipContent)
+  ta.log("Files fetched successfully.")
+
+  return fileName
+
+proc unzip_file_1(ta: TextArea, filename: string): void =
+  var z: ZipArchive
+
+  if not z.open(filename):
+    ta.log("Opening zip failed")
+  else:
+    # extracts all files from archive z to the destination directory.
+    z.extractAll(".")
+    ta.log("Zip files extracted")
+
+# TODO: Provide a list of files + md5 sums and check programmatically
 proc check_game(ta: TextArea): void =
-  ta.log("Game is good")
+  var content: string = ""
+
+  if fileExists("./eqgame.exe"):
+    content = readFile("./eqgame.exe")
+
+  if "b86646f1a48990a9355644b6e146e70c" == getMD5(content):
+    ta.log("./eqgame.exe is the expected version")
+  else:
+    ta.log("====================================================")
+    ta.log("./eqgame.exe is NOT the expected version - visit: ")
+    ta.log("")
+    ta.log("https://wiki.takp.info/index.php/Getting_Started_on_Windows#Obtaining_and_Running_the_Client")
+    ta.log("")
+    ta.log("to download the proper game files (use link #1)")
+    ta.log("====================================================")
 
 proc patch_game(ta: TextArea): void =
   ta.log("Updating the game files...")
-  unzip_file_1(fetch_file_1())
+  unzip_file_1(ta, fetch_file_1(ta))
   ta.log("Game is up to date!")
 
 proc run_game(ta: TextArea): void =
@@ -45,27 +72,27 @@ proc run_game(ta: TextArea): void =
 
 when isMainModule:
   app.init()
-  var window = newWindow("NiGui Example")
+  let window = newWindow("Quarm Patcher")
   window.width = 600.scaleToDpi
   window.height = 400.scaleToDpi
   # window.iconPath = "EverQuest.ico"
 
-  var container = newLayoutContainer(Layout_Vertical)
+  let container = newLayoutContainer(Layout_Vertical)
   window.add(container)
 
-  var buttonCheck = newButton("Check Game Files")
+  let buttonCheck = newButton("Check Game Files")
   container.add(buttonCheck)
 
-  var buttonPatch = newButton("Patch Game")
+  let buttonPatch = newButton("Patch Game")
   container.add(buttonPatch)
 
-  var buttonRun = newButton("Run Game")
+  let buttonRun = newButton("Run Game")
   container.add(buttonRun)
 
-  var buttonExit = newButton("Exit")
+  let buttonExit = newButton("Exit")
   container.add(buttonExit)
 
-  var textArea = newTextArea()
+  let textArea = newTextArea()
   textArea.editable = false
   container.add(textArea)
 
@@ -74,8 +101,6 @@ when isMainModule:
   buttonRun.onClick = proc(event: ClickEvent) = run_game(textArea)
   buttonExit.onClick = proc(event: ClickEvent) = app.quit()
 
-  textArea.addLine("Button 1 clicked, message box opened.")
-  window.alert("This is a simple message box.")
-  textArea.addLine("Message box closed.")
+  # window.alert("This is a simple message box.")
   window.show()
   app.run()
