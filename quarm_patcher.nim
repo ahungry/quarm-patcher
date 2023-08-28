@@ -40,19 +40,30 @@ proc unzip_file_1(ta: TextArea, filename: string): void =
 # TODO: Provide a list of files + md5 sums and check programmatically
 proc check_game(ta: TextArea): void =
   var content: string = ""
+  var contentDll: string = ""
 
   if fileExists("./eqgame.exe"):
     content = readFile("./eqgame.exe")
 
   if "b86646f1a48990a9355644b6e146e70c" == getMD5(content):
-    ta.log("./eqgame.exe is the expected version")
+    ta.log("./eqgame.exe IS the expected version")
   else:
     ta.log("====================================================")
-    ta.log("./eqgame.exe is NOT the expected version - visit: ")
+    ta.log("./eqgame.exe IS NOT the expected version - visit: ")
     ta.log("")
     ta.log("https://wiki.takp.info/index.php/Getting_Started_on_Windows#Obtaining_and_Running_the_Client")
     ta.log("")
     ta.log("to download the proper game files (use link #1)")
+    ta.log("====================================================")
+
+  if fileExists("./eqgame.dll"):
+    contentDll = readFile("./eqgame.dll")
+
+  if "63d2b77d7de61d88fdb2fb674077d511" == getMD5(contentDll):
+    ta.log("./eqgame.dll IS the expected version")
+  else:
+    ta.log("====================================================")
+    ta.log("./eqgame.dll IS NOT the expected version - click 'Patch Game': ")
     ta.log("====================================================")
 
 proc patch_game(ta: TextArea): void =
@@ -67,8 +78,11 @@ proc run_game(ta: TextArea): void =
     ta.log(&"Missing game file: {gameFile}")
     return
 
-  let result = execProcess(gameFile, args=[], options={poUsePath})
-  ta.log(result)
+  when defined windows:
+    let result = execProcess(gameFile, args=[], options={poUsePath})
+    ta.log(result)
+  else:
+    ta.log("Sorry, only Windows launch is available atm (Wine requires more customization...)")
 
 when isMainModule:
   app.init()

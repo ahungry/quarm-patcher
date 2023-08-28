@@ -2,3 +2,6 @@
 *.bin
 *.exe
 *.zip
+*.tar.gz
+*.zip
+quarm-patcher/
