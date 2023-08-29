@@ -3,7 +3,7 @@ all: quarm_patcher.bin
 # Use the -r to run at compile time if desired
 
 quarm_patcher.bin: quarm_patcher.nim
-	nim c -d:ssl -d:release --gc:orc -o:$@ $<
+	nim c -d:ssl -d:release --mm:orc -o:$@ $<
 
 quarm_patcher.exe: quarm_patcher.nim zlib1.dll libcrypto-1_1-x64.dll libssp-0.dll libssl-1_1-x64.dll
 	nim -l:"-lz" c -d:ssl -d:release -d:mingw --mm:orc -o:$@ quarm_patcher.nim

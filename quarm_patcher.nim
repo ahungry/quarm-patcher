@@ -12,6 +12,20 @@ proc log(ta: TextArea, msg: string): void =
   ta.addLine(msg)
   ta.scrollToBottom()
 
+proc has_md5(fileName: string, md5eq: string): bool =
+  var content: string = ""
+
+  if fileExists(fileName):
+    content = readFile(fileName)
+
+  return md5eq == getMD5(content)
+
+proc is_eqgame_ok(): bool =
+  return "./eqgame.exe".has_md5("b86646f1a48990a9355644b6e146e70c")
+
+proc is_eqdll_ok(): bool =
+  return "./eqgame.dll".has_md5("63d2b77d7de61d88fdb2fb674077d511")
+
 # TODO: Provide a list of files + destinations and handle programmatically
 proc fetch_file_1(ta: TextArea): string =
   const
@@ -39,13 +53,7 @@ proc unzip_file_1(ta: TextArea, filename: string): void =
 
 # TODO: Provide a list of files + md5 sums and check programmatically
 proc check_game(ta: TextArea): void =
-  var content: string = ""
-  var contentDll: string = ""
-
-  if fileExists("./eqgame.exe"):
-    content = readFile("./eqgame.exe")
-
-  if "b86646f1a48990a9355644b6e146e70c" == getMD5(content):
+  if is_eqgame_ok():
     ta.log("./eqgame.exe IS the expected version")
   else:
     ta.log("====================================================")
@@ -56,10 +64,7 @@ proc check_game(ta: TextArea): void =
     ta.log("to download the proper game files (use link #1)")
     ta.log("====================================================")
 
-  if fileExists("./eqgame.dll"):
-    contentDll = readFile("./eqgame.dll")
-
-  if "63d2b77d7de61d88fdb2fb674077d511" == getMD5(contentDll):
+  if is_eqdll_ok():
     ta.log("./eqgame.dll IS the expected version")
   else:
     ta.log("====================================================")
@@ -67,6 +72,11 @@ proc check_game(ta: TextArea): void =
     ta.log("====================================================")
 
 proc patch_game(ta: TextArea): void =
+  if not is_eqgame_ok():
+    ta.log("ERROR: Refusing to patch files - your eqgame.exe is incorrect.")
+    ta.log("Please try 'Check Game Files' for help, or correct your directory.")
+    return
+
   ta.log("Updating the game files...")
   unzip_file_1(ta, fetch_file_1(ta))
   ta.log("Game is up to date!")
@@ -78,42 +88,88 @@ proc run_game(ta: TextArea): void =
     ta.log(&"Missing game file: {gameFile}")
     return
 
+  if not is_eqgame_ok() or not is_eqdll_ok():
+    ta.log("Please try 'Check Game Files' for help, or correct your directory.")
+    return
+
   when defined windows:
     let result = execProcess(gameFile, args=[], options={poUsePath})
     ta.log(result)
   else:
-    ta.log("Sorry, only Windows launch is available atm (Wine requires more customization...)")
+    let result = execProcess("wine", args=[gameFile], options={poUsePath})
+    ta.log(result)
 
 when isMainModule:
   app.init()
+  let patcherDir = os.getCurrentDir()
+  let gameDirFile = &"{patcherDir}/gamedir.txt"
+  var gameDir = ""
+
+  if fileExists(gameDirFile):
+    gameDir = readFile(gameDirFile)
+
+    if dirExists(gameDir):
+      os.setCurrentDir(gameDir)
+    else:
+      echo "Invalid gamedir.txt - ignoring."
+
   let window = newWindow("Quarm Patcher")
   window.width = 600.scaleToDpi
   window.height = 400.scaleToDpi
   # window.iconPath = "EverQuest.ico"
 
-  let container = newLayoutContainer(Layout_Vertical)
-  window.add(container)
+  let containerOuter = newLayoutContainer(Layout_Vertical)
+  let container1 = newLayoutContainer(Layout_Horizontal)
+  let container2 = newLayoutContainer(Layout_Horizontal)
+  window.add(containerOuter)
+  containerOuter.add(container1)
+  containerOuter.add(container2)
 
   let buttonCheck = newButton("Check Game Files")
-  container.add(buttonCheck)
+  container1.add(buttonCheck)
 
   let buttonPatch = newButton("Patch Game")
-  container.add(buttonPatch)
+  container1.add(buttonPatch)
 
   let buttonRun = newButton("Run Game")
-  container.add(buttonRun)
+  container1.add(buttonRun)
+
+  var buttonDir = newButton(&"Game Dir: [{gameDir}]")
+  container2.add(buttonDir)
+
+  let buttonClear = newButton("Clear Text")
+  container2.add(buttonClear)
 
   let buttonExit = newButton("Exit")
-  container.add(buttonExit)
+  container2.add(buttonExit)
 
   let textArea = newTextArea()
   textArea.editable = false
-  container.add(textArea)
+  containerOuter.add(textArea)
 
   buttonCheck.onClick = proc(event: ClickEvent) = check_game(textArea)
   buttonPatch.onClick = proc(event: ClickEvent) = patch_game(textArea)
   buttonRun.onClick = proc(event: ClickEvent) = run_game(textArea)
   buttonExit.onClick = proc(event: ClickEvent) = app.quit()
+
+  textArea.log("This patcher is BETA (much like Quarm :)) - please check GitHub for new releases (at least until I add a self updater perhaps...).")
+
+  buttonClear.onClick = proc(event: ClickEvent) =
+    textArea.text = ""
+
+  buttonDir.onClick = proc(event: ClickEvent) =
+    var dialog = SelectDirectoryDialog()
+    dialog.title = "Test Save"
+    dialog.startDirectory = gameDir
+    dialog.run()
+    if dialog.selectedDirectory == "":
+      textArea.addLine("No dir selected")
+    else:
+      gameDir = dialog.selectedDirectory
+      textArea.log(&"Changed directory to: {gameDir}")
+      os.setCurrentDir(gameDir)
+      buttonDir.text = &"Game Dir: [{gameDir}])"
+      writeFile(gameDirFile, gameDir)
 
   # window.alert("This is a simple message box.")
   window.show()
