@@ -131,8 +131,8 @@ when isMainModule:
   let buttonPatch = newButton("Patch Game")
   container1.add(buttonPatch)
 
-  let buttonRun = newButton("Run Game")
-  container1.add(buttonRun)
+  let buttonLaunch = newButton("Launch Game")
+  container1.add(buttonLaunch)
 
   var buttonDir = newButton(&"Game Dir: [{gameDir}]")
   container2.add(buttonDir)
@@ -149,7 +149,7 @@ when isMainModule:
 
   buttonCheck.onClick = proc(event: ClickEvent) = check_game(textArea)
   buttonPatch.onClick = proc(event: ClickEvent) = patch_game(textArea)
-  buttonRun.onClick = proc(event: ClickEvent) = run_game(textArea)
+  buttonLaunch.onClick = proc(event: ClickEvent) = run_game(textArea)
   buttonExit.onClick = proc(event: ClickEvent) = app.quit()
 
   textArea.log("This patcher is BETA (much like Quarm :)) - please check GitHub for new releases (at least until I add a self updater perhaps...).")
